@@ -1,0 +1,2334 @@
+FCFS.java
+
+
+
+/***************************************************************************
+ Name - Atharv Ravindra Sonawane 
+ Div - B-44
+ Problem Statement :-
+    Write a program to simulate CPU scheduling algorithms 
+    FCFS, SJF, Piority, and Round Robin
+ ***************************************************************************/
+
+import java.util.Scanner;
+public class FCFS 
+{
+    static class Process 
+    {
+        int id = 0;
+        int arrivalTime = 0;
+        int burstTime = 0;
+        int completionTime = 0;
+        int turnaroundTime = 0;
+        int waitingTime = 0;
+        int priority = 0;
+
+        Process(int id, int arrivalTime, int burstTime,int priority) 
+        {
+            this.id = id;
+            this.arrivalTime = arrivalTime;
+            this.burstTime = burstTime;
+            this.priority = priority;
+        }
+
+        Process(int id,int burstTime,int priority) 
+        {
+            this.id = id;
+            this.arrivalTime = arrivalTime;
+            this.burstTime = burstTime;
+            this.priority = priority;
+        }
+    }
+
+    private static void calculateFCFS(Process[] processes) 
+    {
+        int currentTime = 0;
+
+        for (Process p : processes) 
+        {
+            // Ensure the current time is at least the arrival time of the process
+            if (currentTime < p.arrivalTime) 
+                currentTime = p.arrivalTime;
+            
+
+            p.completionTime = currentTime + p.burstTime;
+
+            p.turnaroundTime = p.completionTime - p.arrivalTime;
+
+            p.waitingTime = p.turnaroundTime - p.burstTime;
+
+            currentTime = p.completionTime;
+        }
+    }
+
+    private static void calculatePriority(Process[] processes) 
+    {
+        int n = processes.length;
+        int currentTime = 0;
+        int completed = 0;
+
+        boolean[] isCompleted = new boolean[n];
+
+        while (completed < n) 
+        {
+            int idx = -1;
+            int highestPriority = Integer.MAX_VALUE;
+            int earliestArrival = Integer.MAX_VALUE;
+
+            for (int i = 0; i < n; i++) 
+            {
+                if (processes[i].arrivalTime <= currentTime && !isCompleted[i]) 
+                {
+                    if (processes[i].priority < highestPriority) 
+                    {
+                        highestPriority = processes[i].priority;
+                        earliestArrival = processes[i].arrivalTime;
+                        idx = i;
+                    }
+                    else if (processes[i].priority == highestPriority) 
+                    {
+                        if (processes[i].arrivalTime < earliestArrival) 
+                        {
+                            earliestArrival = processes[i].arrivalTime;
+                            idx = i;
+                        }
+                        else if (processes[i].arrivalTime == earliestArrival) 
+                            if (processes[i].id < processes[idx].id) 
+                                idx = i;
+                    }
+                }
+            }
+            if (idx != -1) 
+            {
+                Process p = processes[idx];
+
+                if (currentTime < p.arrivalTime) 
+                {
+                    currentTime = p.arrivalTime;
+                }
+
+                p.completionTime = currentTime + p.burstTime;
+
+                p.turnaroundTime = p.completionTime - p.arrivalTime;
+
+                p.waitingTime = p.turnaroundTime - p.burstTime;
+
+                currentTime = p.completionTime;
+
+                isCompleted[idx] = true;
+                completed++;
+            } 
+            else 
+                currentTime++;
+            
+        }
+    }
+    private static void calculateSJF(Process[] processes) 
+    {
+        int n = processes.length, completed = 0;
+        int currentTime = 0; // Start at time 0
+        boolean[] comp = new boolean[n];
+
+        while (completed < n) 
+        {
+            int min = 9999;
+            int md = -1; 
+
+            for (int i = 0; i < n; i++) 
+            {
+                if (!comp[i] && processes[i].arrivalTime <= currentTime && processes[i].burstTime < min) 
+                {
+                    min = processes[i].burstTime;
+                    md = i;
+                }
+            }
+
+            if (md == -1) {
+                currentTime++;
+                continue;
+            }
+
+            processes[md].completionTime = currentTime + processes[md].burstTime;
+            processes[md].turnaroundTime = processes[md].completionTime - processes[md].arrivalTime;
+            processes[md].waitingTime = processes[md].turnaroundTime - processes[md].burstTime;
+
+            currentTime = processes[md].completionTime;
+
+            comp[md] = true;
+            completed++;
+        }
+    }
+    private static void calculateRR(Process[] processes) 
+    {
+        int n = processes.length;
+        Scanner sc = new Scanner(System.in);
+        System.out.print("\nEnter Time Quantum: ");
+        int tq = sc.nextInt();
+        
+        int[] rbt = new int[n];
+        for (int i = 0; i < n; i++) 
+        {
+            rbt[i] = processes[i].burstTime;  // Copy burst time
+        }
+        
+        int currentTime = 0;
+        int completed = 0; 
+        boolean[] comp = new boolean[n];
+
+        while (completed < n) 
+        {
+            boolean didProcessRun = false; 
+
+            for (int i = 0; i < n; i++) 
+            {
+                if (!comp[i]) 
+                {
+                    didProcessRun = true;                    
+                    if (rbt[i] > tq) 
+                    {
+                        currentTime += tq;
+                        rbt[i] -= tq; 
+                    }
+                    else 
+                    {
+                        currentTime += rbt[i];
+                        rbt[i] = 0;  
+
+                        comp[i] = true;
+                        completed++;
+                        
+                        processes[i].completionTime = currentTime;
+                        processes[i].turnaroundTime = currentTime - processes[i].arrivalTime;
+                        processes[i].waitingTime = processes[i].turnaroundTime - processes[i].burstTime;
+                    }
+                }
+            }
+            
+            if (!didProcessRun) 
+            {
+                currentTime++;
+            }
+        }
+    }
+
+
+
+    private static void display(Process[] processes)
+    {
+        System.out.println("\nProcess ID | Arrival Time | Priority | Burst Time | Completion Time | Turnaround Time | Waiting Time");        
+        for (Process p : processes) 
+            System.out.printf("%9d | %12d | %9d | %9d | %15d | %14d | %11d\n",
+                p.id, p.arrivalTime,p.priority, p.burstTime, p.completionTime, p.turnaroundTime, p.waitingTime);
+        
+    }
+    public static void main(String[] args) 
+    {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Enter the number of processes: ");
+        int n = scanner.nextInt();
+
+        Process[] processes = new Process[n];
+        int ch = 0; // for priority scheduling
+        
+        do
+        {
+            System.out.println("\n-------MENU------");
+            System.out.println("1.FCFS");
+            System.out.println("2.SJF");
+            System.out.println("3.Priority");
+            System.out.println("4.RR");
+            System.out.println("5.Exit");
+            System.out.print("Enter your choice : ");
+            ch = scanner.nextInt();
+            switch(ch)
+            {
+                case 1:
+                    for(int i = 0; i < n; i++) 
+                    {
+                        System.out.print("Enter arrival time for process " + (i + 1) + ": ");
+                        int arrivalTime = scanner.nextInt();
+                        System.out.print("Enter burst time for process " + (i + 1) + ": ");
+                        int burstTime = scanner.nextInt();
+                        processes[i] = new Process(i + 1, arrivalTime, burstTime,0);
+                    }
+                    for(int i = 0; i < n - 1; i++)
+                    {
+                        for(int j = i + 1; j < n; j++)
+                        {
+                            if(processes[i].arrivalTime > processes[j].arrivalTime)
+                            {
+                                Process temp = processes[i];
+                                processes[i] = processes[j];
+                                processes[j] = temp;
+                            }
+                        }
+
+                    }
+                    calculateFCFS(processes);
+                    display(processes);
+                    break;
+
+                case 2:
+                    for(int i = 0; i < n; i++) 
+                    {
+                        System.out.print("Enter arrival time for process " + (i + 1) + ": ");
+                        int arrivalTime = scanner.nextInt();
+                        System.out.print("Enter burst time for process " + (i + 1) + ": ");
+                        int burstTime = scanner.nextInt();
+                        processes[i] = new Process(i + 1, arrivalTime, burstTime,0);
+                    }
+                    for(int i = 0; i < n - 1; i++)
+                    {
+                        for(int j = i + 1; j < n; j++)
+                        {
+                            if(processes[i].arrivalTime > processes[j].arrivalTime)
+                            {
+                                Process temp = processes[i];
+                                processes[i] = processes[j];
+                                processes[j] = temp;
+                            }
+                        }
+
+                    }
+                    calculateSJF(processes);
+                    display(processes);
+                    break;
+                case 3:
+                    for(int i = 0; i < n; i++) 
+                    {
+                        System.out.print("Enter arrival time for process " + (i + 1) + ": ");
+                        int arrivalTime = scanner.nextInt();
+                        System.out.print("Enter burst time for process " + (i + 1) + ": ");
+                        int burstTime = scanner.nextInt();
+                        System.out.print("Enter priority for process " + (i + 1) + ": ");
+                        int priority = scanner.nextInt();
+                        processes[i] = new Process(i + 1, arrivalTime, burstTime,priority);
+                    }   
+                    for(int i = 0; i < n - 1; i++)
+                    {
+                        for(int j = i + 1; j < n; j++)
+                        {
+                            if(processes[i].arrivalTime > processes[j].arrivalTime)
+                            {
+                                Process temp = processes[i];
+                                processes[i] = processes[j];
+                                processes[j] = temp;
+                            }
+                        }
+
+                    }
+                    calculatePriority(processes);
+                    display(processes);
+                    break;
+
+                case 4:
+                    for(int i = 0; i < n; i++) 
+                    {
+                        System.out.print("Enter burst time for process " + (i + 1) + ": ");
+                        int burstTime = scanner.nextInt();
+                        processes[i] = new Process(i + 1, burstTime,0);
+                    }
+                    for(int i = 0; i < n - 1; i++)
+                    {
+                        for(int j = i + 1; j < n; j++)
+                        {
+                            if(processes[i].arrivalTime > processes[j].arrivalTime)
+                            {
+                                Process temp = processes[i];
+                                processes[i] = processes[j];
+                                processes[j] = temp;
+                            }
+                        }
+
+                    }
+                    calculateRR(processes);
+                    display(processes);
+                    break;
+            }
+
+        }while(ch != 5);
+
+        scanner.close();
+    }
+}
+
+
+/* OUTPUT :- 
+
+C:\Users\athar\OneDrive\Desktop\Java\SPOS>java FCFS
+Enter the number of processes: 6
+
+-------MENU------
+1.FCFS
+2.SJF
+3.Priority
+4.RR
+5.Exit
+Enter your choice : 1
+Enter arrival time for process 1: 0
+Enter burst time for process 1: 9
+Enter arrival time for process 2: 1
+Enter burst time for process 2: 3
+Enter arrival time for process 3: 1
+Enter burst time for process 3: 2
+Enter arrival time for process 4: 1
+Enter burst time for process 4: 4
+Enter arrival time for process 5: 2
+Enter burst time for process 5: 3
+Enter arrival time for process 6: 3
+Enter burst time for process 6: 2
+
+Process ID | Arrival Time | Priority | Burst Time | Completion Time | Turnaround Time | Waiting Time
+        1 |            0 |         0 |         9 |               9 |              9 |           0
+        2 |            1 |         0 |         3 |              12 |             11 |           8
+        3 |            1 |         0 |         2 |              14 |             13 |          11
+        4 |            1 |         0 |         4 |              18 |             17 |          13
+        5 |            2 |         0 |         3 |              21 |             19 |          16
+        6 |            3 |         0 |         2 |              23 |             20 |          18
+
+-------MENU------
+1.FCFS
+2.SJF
+3.Priority
+4.RR
+5.Exit
+Enter your choice : 2
+Enter arrival time for process 1: 1
+Enter burst time for process 1: 7
+Enter arrival time for process 2: 3
+Enter burst time for process 2: 3
+Enter arrival time for process 3: 6
+Enter burst time for process 3: 2
+Enter arrival time for process 4: 7
+Enter burst time for process 4: 10
+Enter arrival time for process 5: 9
+Enter burst time for process 5: 8
+Enter arrival time for process 6: 14
+Enter burst time for process 6: 3
+
+Process ID | Arrival Time | Priority | Burst Time | Completion Time | Turnaround Time | Waiting Time
+        1 |            1 |         0 |         7 |               8 |              7 |           0
+        2 |            3 |         0 |         3 |              13 |             10 |           7
+        3 |            6 |         0 |         2 |              10 |              4 |           2
+        4 |            7 |         0 |        10 |              34 |             27 |          17
+        5 |            9 |         0 |         8 |              21 |             12 |           4
+        6 |           14 |         0 |         3 |              24 |             10 |           7
+
+-------MENU------
+1.FCFS
+2.SJF
+3.Priority
+4.RR
+5.Exit
+Enter your choice : 3
+Enter arrival time for process 1: 0
+Enter burst time for process 1: 1
+Enter priority for process 1: 6
+Enter arrival time for process 2: 1
+Enter burst time for process 2: 7
+Enter priority for process 2: 4
+Enter arrival time for process 3: 2
+Enter burst time for process 3: 3
+Enter priority for process 3: 3
+Enter arrival time for process 4: 3
+Enter burst time for process 4: 6
+Enter priority for process 4: 5
+Enter arrival time for process 5: 4
+Enter burst time for process 5: 5
+Enter priority for process 5: 1
+Enter arrival time for process 6: 5
+Enter burst time for process 6: 15
+Enter priority for process 6: 2
+
+Process ID | Arrival Time | Priority | Burst Time | Completion Time | Turnaround Time | Waiting Time
+        1 |            0 |         6 |         1 |               1 |              1 |           0
+        2 |            1 |         4 |         7 |               8 |              7 |           0
+        3 |            2 |         3 |         3 |              31 |             29 |          26
+        4 |            3 |         5 |         6 |              37 |             34 |          28
+        5 |            4 |         1 |         5 |              13 |              9 |           4
+        6 |            5 |         2 |        15 |              28 |             23 |           8
+
+
+-------MENU------
+1.FCFS
+2.SJF
+3.Priority
+4.RR
+5.Exit
+Enter your choice : 4
+Enter burst time for process 1: 10
+Enter burst time for process 2: 5
+Enter burst time for process 3: 8
+Enter burst time for process 4: 3
+Enter burst time for process 5: 6
+
+Enter Time Quantum: 3
+
+Process ID | Arrival Time | Priority | Burst Time | Completion Time | Turnaround Time | Waiting Time
+        1 |            0 |         0 |        10 |              32 |             32 |          22
+        2 |            0 |         0 |         5 |              20 |             20 |          15
+        3 |            0 |         0 |         8 |              31 |             31 |          23
+        4 |            0 |         0 |         3 |              12 |             12 |           9
+        5 |            0 |         0 |         6 |              26 |             26 |          20
+
+-------MENU------
+1.FCFS
+2.SJF
+3.Priority
+4.RR
+5.Exit
+Enter your choice : 5
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fitter.java
+
+
+
+
+
+
+
+
+
+
+/***************************************************************************
+ Name - Atharv Ravindra Sonawane 
+ Div - B-44
+ Problem Statement :-
+ 	Write a program to simulate CPU scheduling algorithms 
+ 	FCFS, SJF, Piority, and Round Robin
+ ***************************************************************************/
+
+
+import java.util.Scanner;
+
+class Sizes
+{
+	int size = 0;
+	int block_alloc = 0;
+	int index = 0;
+}
+
+public class Fitter
+{
+	static void FirstFit(int blocks[], Sizes sizes[], int n, int m)
+	{
+		int rem_size[] = new int[n];
+		for(int i = 0 ; i < n; i++ )
+			rem_size[i] = blocks[i];
+		int bloc_alloc[] = new int[n];
+		for(int i = 0; i < m; i++)
+		{
+			for(int j = 0; j < n; j++)
+			{
+				if(sizes[i].size <= rem_size[j])
+				{
+					rem_size[j] -= sizes[i].size;
+					sizes[i].block_alloc = blocks[j];
+					sizes[i].index = j;
+					break;
+				}
+			}
+		}
+		System.out.print("\nProcess No.\tSizes\tBlock Size\tRemaining Size\n");
+		for(int i = 0; i < m; i++)
+		{
+
+			System.out.printf("%6d%13d%10d",i+1,sizes[i].size,sizes[i].block_alloc);
+			if(sizes[i].block_alloc == 0)
+				System.out.printf("\t\tNo Block Allocated\n");
+			else
+				System.out.printf("%15d\n",rem_size[sizes[i].index]);
+		}
+	}
+	static void BestFit(int blocks[], Sizes sizes[], int n, int m)
+	{
+		int j,i;
+		int rem_size[] = new int[n];
+		for(i = 0 ; i < n; i++)
+			rem_size[i] = blocks[i];
+		int min_ind = -1, min = -1;
+		for(i = 0; i < m; i++)
+		{			
+			min = min_ind = -1;
+			boolean flag = true;
+			for(j = 0; j < n; j++)
+			{
+				if(sizes[i].size <= rem_size[j])
+				{
+					if(min > rem_size[j] - sizes[i].size || flag == true)
+					{
+						min = rem_size[j] - sizes[i].size;
+						min_ind = j;
+						flag = false;
+					}
+				}
+			}
+			if(!(min < 0))
+			{
+				rem_size[min_ind] = rem_size[min_ind] - sizes[i].size;
+				sizes[i].block_alloc = blocks[min_ind];
+				sizes[i].index = min_ind;
+			}
+		}
+
+		System.out.print("\nProcess No.\tSizes\tBlock Size\tRemaining Size\n");
+		for(i = 0; i < m; i++)
+		{
+
+			System.out.printf("%6d%13d%10d",i+1,sizes[i].size,sizes[i].block_alloc);
+			if(sizes[i].block_alloc == 0)
+				System.out.printf("\t\tNo Block Allocated\n");
+			else
+				System.out.printf("%15d\n",rem_size[sizes[i].index]);
+		}
+	}
+
+	static void WorstFit(int blocks[], Sizes sizes[], int n, int m)
+	{
+		int j,i;
+		int rem_size[] = new int[n];
+		for(i = 0 ; i < n; i++)
+			rem_size[i] = blocks[i];
+		int max_ind  = -1, max = -1;
+		for(i = 0; i < m; i++)
+		{			
+			max = max_ind = -1;
+			boolean flag = true;
+			for(j = 0; j < n; j++)
+			{
+				if(sizes[i].size <= rem_size[j])
+				{
+					if( max < rem_size[j] - sizes[i].size || flag == true )
+					{
+						max = rem_size[j] - sizes[i].size;
+						max_ind = j;
+						flag = false;
+					}
+				}
+			}
+			if(!(max < 0))
+			{
+				rem_size[max_ind] = rem_size[max_ind] - sizes[i].size;
+				sizes[i].block_alloc = blocks[max_ind];
+				sizes[i].index = max_ind;
+
+			}
+		}
+
+		System.out.print("\nProcess No.\tSizes\tBlock Size\tRemaining Size\n");
+		for(i = 0; i < m; i++)
+		{
+
+			System.out.printf("%6d%13d%10d",i+1,sizes[i].size,sizes[i].block_alloc);
+			if(sizes[i].block_alloc == 0)
+				System.out.printf("\t\tNo Block Allocated\n");
+			else
+				System.out.printf("%15d\n",rem_size[sizes[i].index]);
+		}
+	}
+
+	static void NextFit(int blocks[], Sizes sizes[], int n, int m)
+	{
+		int i,j,count = 0;
+		int rem_size[] = new int[n];
+		for(i = 0 ; i < n; i++ )
+			rem_size[i] = blocks[i];
+
+		for(j = 0; j < n; j++)
+		{
+			if(sizes[0].size <= rem_size[j])
+			{
+				rem_size[j] -= sizes[0].size;
+				sizes[0].block_alloc = blocks[j];
+				sizes[0].index = j;
+				break;
+			}
+		}
+
+		for(i = 1; i < m; i++)
+		{
+			for(count = 0,j = j + 1; count < n ;j++)
+			{
+				j = j % n;
+				if(sizes[i].size <= rem_size[j])
+				{
+					rem_size[j] -= sizes[i].size;
+					sizes[i].block_alloc = blocks[j];
+					sizes[i].index = j;
+					break;
+				}
+				
+				count++;
+				System.out.println(j);
+			}
+		}
+
+		System.out.print("\nProcess No.\tSizes\tBlock Size\tRemaining Size\n");
+		for(i = 0; i < m; i++)
+		{
+
+			System.out.printf("%6d%13d%10d",i+1,sizes[i].size,sizes[i].block_alloc);
+			if(sizes[i].block_alloc == 0)
+				System.out.printf("\t\tNo Block Allocated\n");
+			else
+				System.out.printf("%15d\n",rem_size[sizes[i].index]);
+		}
+	
+
+	}
+
+	public static void main(String[] args)
+	{
+		Scanner sc = new Scanner(System.in);
+		System.out.print("Enter the Number of Blocks : ");
+		int n = sc.nextInt();
+		int blocks[] = new int[n];
+		for(int i = 0; i < n; i++)
+		{
+			System.out.print("Enter " + (i + 1) + "th Block's Size : ");
+			blocks[i] = sc.nextInt();
+		}
+
+		System.out.print("\nEnter the Number of Sizes : ");
+		int m = sc.nextInt();
+		Sizes sizes[] = new Sizes[m];
+		for(int i = 0; i < m; i++)
+			sizes[i] = new Sizes();
+
+		for(int i = 0; i < m; i++)
+		{
+			System.out.print("Enter " + (i + 1) + "th Size : ");
+			sizes[i].size = sc.nextInt();
+		}
+		int ch;
+		do
+		{
+			System.out.println("\n---------MENU---------");
+			System.out.println("1.First Fit");
+			System.out.println("2.Best Fit");
+			System.out.println("3.Worst Fit");
+			System.out.println("4.Next Fit");
+			System.out.println("5.Exit");
+			System.out.print("Enter your choice : ");
+			ch = sc.nextInt();
+			switch(ch)
+			{
+				case 1:
+					FirstFit(blocks,sizes,n,m);
+					break;
+				case 2:
+					BestFit(blocks,sizes,n,m);
+					break;
+				case 3:
+					WorstFit(blocks,sizes,n,m);
+					break;
+				case 4:
+					NextFit(blocks,sizes,n,m);
+					break;
+				case 5:
+					System.out.println("GG");
+					break;
+				default:
+					System.out.println("Wrong choice entered!!");
+					break;
+			}
+		}while(ch != 5);
+
+		
+		
+
+	}
+
+}
+
+/*
+OUTPUT :-----
+
+gescoe@gescoe-OptiPlex-3010:~/Desktop/TE_44_SPOS/Java$ javac Fitter.java
+gescoe@gescoe-OptiPlex-3010:~/Desktop/TE_44_SPOS/Java$ java Fitter
+Enter the Number of Blocks : 6
+Enter 1th Block's Size : 300
+Enter 2th Block's Size : 600
+Enter 3th Block's Size : 350
+Enter 4th Block's Size : 200
+Enter 5th Block's Size : 750
+Enter 6th Block's Size : 125
+
+Enter the Number of Sizes : 5
+Enter 1th Size : 115
+Enter 2th Size : 500
+Enter 3th Size : 358
+Enter 4th Size : 200
+Enter 5th Size : 375
+
+---------MENU---------
+1.First Fit
+2.Best Fit
+3.Worst Fit
+4.Next Fit
+5.Exit
+Enter your choice : 1
+
+Process No.	Sizes	Block Size	Remaining Size
+     1          115       300            185
+     2          500       600            100
+     3          358       750             17
+     4          200       350            150
+     5          375       750             17
+
+---------MENU---------
+1.First Fit
+2.Best Fit
+3.Worst Fit
+4.Next Fit
+5.Exit
+Enter your choice : 2
+
+Process No.	Sizes	Block Size	Remaining Size
+     1          115       125             10
+     2          500       600            100
+     3          358       750             17
+     4          200       200              0
+     5          375       750             17
+
+---------MENU---------
+1.First Fit
+2.Best Fit
+3.Worst Fit
+4.Next Fit
+5.Exit
+Enter your choice : 3
+
+Process No.	Sizes	Block Size	Remaining Size
+     1          115       750            135
+     2          500       750            135
+     3          358       600            242
+     4          200       350            150
+     5          375       750            135
+
+---------MENU---------
+1.First Fit
+2.Best Fit
+3.Worst Fit
+4.Next Fit
+5.Exit
+Enter your choice : 4
+
+Process No.	Sizes	Block Size	Remaining Size
+     1          115       300            185
+     2          500       600            100
+     3          358       750             17
+     4          200       350            150
+     5          375       750             17
+
+---------MENU---------
+1.First Fit
+2.Best Fit
+3.Worst Fit
+4.Next Fit
+5.Exit
+Enter your choice : 5
+GG
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PageTrans.java
+
+
+
+
+
+
+
+
+
+
+
+
+
+import java.util.Scanner;
+
+
+class FIFO
+{
+	private int front = -1;
+	private int rear = -1;
+	private int arr[];
+
+	FIFO(int n)
+	{
+		arr = new int[n];
+		for(int i = 0; i < n; i++)
+			arr[i] = -1;
+	}
+
+	boolean isEmpty()
+	{
+		return front == -1;
+	}
+
+	boolean isFull()
+	{
+		return front == rear + 1;
+	}
+
+	void enque(int ele)
+	{
+		if(!isFull())
+		{
+			if(front == -1)
+				front = 0;
+			rear = (rear + 1) % arr.length;
+			arr[rear] = ele;
+		}
+	}
+
+	int deque()
+	{
+		if(!isEmpty())
+		{
+			int temp = arr[front];
+			front = (front + 1) % arr.length;
+
+			if(front == 0 && rear == arr.length - 1 || rear == front - 1)
+					front = rear = -1;
+			return temp;
+		}
+		return -1;
+	}
+
+	boolean search(int ele)
+	{
+		for(int i : arr)
+			if(i == ele)
+				return true;
+		return false;
+	}
+
+	void display()
+	{
+		for(int i = 0; i < arr.length; i++)
+		{
+			System.out.printf("%3d",arr[i]);
+		}
+		System.out.println();
+	}
+}
+
+
+public class PageTrans
+{
+	static void display(int lru[])
+	{
+		for(int i : lru)
+			System.out.printf("%3d",i);
+		System.out.println();
+	}
+
+	static boolean search(int lru[] , int e)
+	{
+		for(int i : lru)
+			if(i == e)
+				return true;
+		return false;
+	}
+
+	static int findLRU(int lru[],int pages[], int ind)
+	{
+		int maxd = 0;
+		int maxi = 0;
+		for(int i = 0; i < lru.length; i++)
+		{
+			for(int j = ind - 1; j >= 0; j--)
+			{
+				if(lru[i] == pages[j])
+				{
+					if(maxd < ind - j)
+					{
+						maxd = ind - j;
+						maxi = i;
+					}
+					break;
+				}
+			}
+		}
+		return maxi;
+	}
+	static boolean forward(int pages[], int ind, int e)
+	{
+		for(int i = ind; i < pages.length; i++)
+			if(pages[i] == e)
+				return true;
+		return false;
+	}
+
+	static int findOP(int lru[],int pages[], int ind)
+	{
+		// FIND MAX distance forward.
+		int maxd = -1;
+		int maxi = -1;
+		int i = 0;
+		for(i = 0; i < lru.length; i++)
+		{
+			if(!forward(pages,ind + 1,lru[i]))
+				return i;
+			for(int j = ind + 1; j < pages.length; j++)
+			{
+				if(lru[i] == pages[j])
+				{
+					if(maxd < j - ind)
+					{
+						maxd = j - ind;
+						maxi = i;
+					}
+					break;
+				}
+			}
+		}
+		
+		return maxi;
+	}
+	public static void main(String[] args) 
+	{
+		Scanner sc = new Scanner(System.in);
+		System.out.print("Enter Size : ");
+		int size = sc.nextInt();
+
+		System.out.print("Enter Number of pages : ");
+		int n = sc.nextInt();
+
+		int pages[] = new int[n];
+		System.out.print("Enter " + (n) + " Pages : ");
+		for(int i = 0; i < n; i++)
+			pages[i] = sc.nextInt();
+		int hit = 0;
+		int ch;
+
+		do
+		{
+			System.out.println("\n--------MENU---------");
+			System.out.println("1.FIFO");
+			System.out.println("2.LRU");
+			System.out.println("3.Optimal");
+			System.out.println("4.Exit");
+			System.out.print("Enter your choice : ");
+			ch = sc.nextInt();
+
+			switch(ch)
+			{
+				case 1:
+					FIFO que = new FIFO(size);
+					System.out.println("FIFO : ");
+					for(int i = 0; i < n; i++)
+					{
+						if(que.search(-1))
+						{
+							que.enque(pages[i]);
+							que.display();
+						}
+						else
+						{
+							if(!que.search(pages[i]))
+							{
+								que.deque();
+								que.enque(pages[i]);
+								que.display();
+							}
+							else 
+							{
+								que.display();
+								hit++;
+							}
+						}
+						
+					}
+					System.out.println("Total Hits : " + hit);
+					System.out.println("Total Faults : " +(n - hit));
+					System.out.println();
+
+					break;
+				case 2:
+					int lru[] = new int[size];
+					for(int i = 0; i < size; i++)
+						lru[i] = -1;
+					int i = 0;
+					hit = 0;
+					// For first elements 
+					System.out.println("\nLRU : ");
+					for(int j = 0; j < size; j++)
+					{
+						if(lru[j] == -1)
+						{
+							if(i < n)
+							{					
+								lru[j] = pages[i++];
+								display(lru);
+							}
+							else
+								break;
+						}
+					}
+					
+					// Not for first elements
+					for(; i < n; i++)
+					{
+						if(!search(lru,pages[i]))
+							lru[findLRU(lru,pages,i)] = pages[i];
+						else
+							hit++;
+						display(lru);
+					}
+					System.out.println();
+					System.out.println("Total Hits : " + hit);
+					System.out.println("Total Faults : " +(n - hit));
+					System.out.println();
+
+					break;
+				case 3:
+					int opti[] = new int[size];
+					for(i = 0; i < size; i++)
+						opti[i] = -1;
+
+					i = 0;
+					hit = 0;
+					System.out.println("\nOptimum : ");
+					for(int j = 0; j < size; j++)
+					{
+						if(opti[j] == -1)
+						{
+							if(i < n)
+							{					
+								opti[j] = pages[i++];
+								display(opti);
+							}
+							else
+								break;
+						}
+					}
+
+					for(; i < n; i++)
+					{
+						if(!search(opti,pages[i]))
+							opti[findOP(opti,pages,i)] = pages[i];
+						else
+							hit++;
+						display(opti);
+					}
+					System.out.println();
+					System.out.println("Total Hits : " + hit);
+					System.out.println("Total Faults : " +(n - hit));
+					System.out.println();
+					break;
+			}
+		}while(ch != 4);
+
+	}
+}
+
+/*
+OUTPUT --
+
+
+gescoe@gescoe-OptiPlex-3010:~/Desktop/TE_44_SPOS/Java$ javac PageTrans.java 
+gescoe@gescoe-OptiPlex-3010:~/Desktop/TE_44_SPOS/Java$ java PageTrans
+Enter Size : 3
+Enter Number of pages : 20
+Enter 20 Pages : 7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1
+
+--------MENU---------
+1.FIFO
+2.LRU
+3.Optimal
+4.Exit
+Enter your choice : 1
+FIFO : 
+  7 -1 -1
+  7  0 -1
+  7  0  1
+  2  0  1
+  2  0  1
+  2  3  1
+  2  3  0
+  4  3  0
+  4  2  0
+  4  2  3
+  0  2  3
+  0  2  3
+  0  2  3
+  0  1  3
+  0  1  2
+  0  1  2
+  0  1  2
+  7  1  2
+  7  0  2
+  7  0  1
+Total Hits : 5
+Total Faults : 15
+
+
+--------MENU---------
+1.FIFO
+2.LRU
+3.Optimal
+4.Exit
+Enter your choice : 2
+
+LRU : 
+  7 -1 -1
+  7  0 -1
+  7  0  1
+  2  0  1
+  2  0  1
+  2  0  3
+  2  0  3
+  4  0  3
+  4  0  2
+  4  3  2
+  0  3  2
+  0  3  2
+  0  3  2
+  1  3  2
+  1  3  2
+  1  0  2
+  1  0  2
+  1  0  7
+  1  0  7
+  1  0  7
+
+Total Hits : 8
+Total Faults : 12
+
+
+--------MENU---------
+1.FIFO
+2.LRU
+3.Optimal
+4.Exit
+Enter your choice : 3
+
+Optimum : 
+  7 -1 -1
+  7  0 -1
+  7  0  1
+  2  0  1
+  2  0  1
+  2  0  3
+  2  0  3
+  2  4  3
+  2  4  3
+  2  4  3
+  2  0  3
+  2  0  3
+  2  0  3
+  2  0  1
+  2  0  1
+  2  0  1
+  2  0  1
+  7  0  1
+  7  0  1
+  7  0  1
+
+Total Hits : 11
+Total Faults : 9
+
+
+--------MENU---------
+1.FIFO
+2.LRU
+3.Optimal
+4.Exit
+Enter your choice : 4
+gescoe@gescoe-OptiPlex-3010:~/Desktop/TE_44_SPOS/Java$ 
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RW.java
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/***************************************************************************
+ Name - Atharv Ravindra Sonawane 
+ Div - B-44
+ Problem Statement :-
+ 	Write a program to solve classical problems of Synchronization 
+ 	using Mutex and Semaphore (Reader-Writer Problem).
+
+ ***************************************************************************/
+import java.util.Scanner;
+import java.util.concurrent.Semaphore;
+
+class RW
+{
+
+	public static void main(String[] args) 
+	{
+		ReaderWriter rw = new ReaderWriter();
+		Scanner sc = new Scanner(System.in);
+		
+		rw.new Reader();
+		rw.new Reader();
+		rw.new Reader();
+		rw.new Writer();
+		rw.new Reader();
+		rw.new Reader();
+		rw.new Writer();
+		rw.new Reader();
+		rw.new Reader();
+		
+	}
+
+}
+class ReaderWriter
+{
+
+	Semaphore readers = new Semaphore(0);
+	Semaphore mutex = new Semaphore(1);
+	Semaphore writers = new Semaphore(0);
+	static int rd = 0;
+	static int count = 1;
+	static int wr = 0;
+	Scanner sc = new Scanner(System.in);
+
+	static String msg = "Hello World!";
+	
+
+	class Writer implements Runnable
+	{
+		Writer()
+		{
+			// rd = 0;
+			Thread t = new Thread(this,"Writer");
+
+			t.start();
+		}
+
+		public void run()
+		{
+			try
+			{	
+				
+				mutex.acquire();
+				writers.release();
+
+				if(wr == 0 && rd == 0)
+				{
+					wr++;
+					System.out.print("Enter Message to be written : ");
+					msg = sc.nextLine();
+				}
+				else
+					System.out.println("Readers are Reading!");
+				
+				mutex.release();
+				writers.acquire();
+				wr--;
+			}
+			catch(InterruptedException e)
+			{
+				System.out.println(e.getMessage());
+			}
+
+
+		}
+	}
+
+	class Reader implements Runnable
+	{
+		int no = count;
+
+		Reader()
+		{
+			count++;
+			Thread t = new Thread(this,"Reader");
+
+			t.start();
+		}
+
+		public void run()
+		{
+			try
+			{
+				
+				mutex.acquire();
+				readers.release();
+
+				if(wr == 0)
+				{
+					rd++;
+					System.out.println("Reader " + no + " is reading : " + msg);
+					Thread.sleep(1000); // Simulating Reading time.
+					rd--;
+				}
+				else
+					System.out.println("A Writer is Writing!");
+
+				mutex.release();
+				readers.acquire();
+				
+				System.out.println("Reader " + no + " is Done!");
+				
+			}
+			catch(InterruptedException e)
+			{
+				System.out.println(e.getMessage());
+			}
+		}
+	}
+}
+/*
+OUTPUT : 
+
+Reader 1 is reading : Hello World!
+Reader 2 is reading : Hello World!
+Reader 1 is Done!
+Reader 3 is reading : Hello World!
+Reader 2 is Done!
+Reader 3 is Done!
+Enter Message to be written : Good Morning
+Reader 4 is reading : Good Morning
+Reader 4 is Done!
+Reader 5 is reading : Good Morning
+Reader 5 is Done!
+Enter Message to be written : Ain't no way
+Reader 6 is reading : Ain't no way
+Reader 6 is Done!
+Reader 7 is reading : Ain't no way
+Reader 7 is Done!
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+spos1.Py
+
+
+
+
+
+
+
+
+'''
+/***************************************************************************
+ Name - Atharv Ravindra Sonawane 
+ Div - B-44
+ Problem Statement :-
+    Design suitable Data Structures and Implement Pass - I and Pass - II of a two pass
+    assembler for pseudo machine. Implementation should consist of a few instructions from
+    each category and few assembler directives. The Output of a Pass - I (Intermediate
+    code file and symbol table) should be input for Pass - II.
+***************************************************************************/
+ 
+'''
+
+IS = {
+    "STOP" : "00",
+    "ADD" : "01",
+    "SUB" : "02",
+    "MULT" : "03",
+    "MOVER" : "04",
+    "MOVEM" : "05",
+    "COMP" : "06",
+    "BC" : "07",
+    "DIV" : "08",
+    "READ" : "09",
+    "PRINT" : "10"
+    }
+
+DL = {"DC" : "01",
+      "DS" : "02"}
+AD = {
+    "START" : "01",
+    "END" : "02",
+    "ORIGIN" : "03",
+    "EQU" : "04",
+    "LTORG" : "05"
+    }
+REG = {
+    "AREG" : "01",
+    "BREG" : "02",
+    "CREG" : "03",
+    "DREG" : "04"
+    }
+COND = {
+    "LT" : "1",
+    "LE" : "2",
+    "EQ" : "3",
+    "GT" : "4",
+    "GE" : "5",
+    "ANY" : "6"
+    }
+
+loc_count = 0
+
+f = open("file.txt",'r')
+l = []
+data = f.read()
+data = data.strip()
+m = []
+l = data.splitlines()
+
+flag = True
+lag = 0
+lit_tab = []
+lit = [] # Total Literals
+literals = 0
+lit_cnt = 1
+lit_count = 1
+pool_tab = []
+
+sym = {} # Symbols with addresses
+sym_table = []
+# cnt = 1
+symbols = [] # Total Symbols
+
+#to write in file
+output = ""
+
+#for symbols
+for i in l:
+    i = i.replace(","," ")
+    m = i.split()
+    
+    if m[0] == "START":
+        loc_count = int(m[1])
+    if m[0] in IS:
+        loc_count+=1
+        if len(m) > 2 and '=' in m[2]:
+            if not pool_tab:
+                pool_tab.append(1)
+            lit.append(m[2])   
+            
+    elif m[0] in AD:
+        #LTORG
+        if m[0] == "LTORG":
+            lag+=1
+            for i in lit:
+                for j in lit_tab:
+                    if i in j:
+                        flag = False
+                        break
+                    else:
+                        flag = True
+                if flag:
+                    lit_tab.append([i,loc_count])
+                    loc_count+=1
+                    literals+=1
+            pool_tab.append(literals+1)
+       
+        if m[0] == 'ORIGIN':
+            n = m[1].split("+")
+            loc_count = int(sym[n[0]]) + int(n[1])
+            
+    else:
+        if len(m) > 3 and '=' in m[3]:
+            if not pool_tab:
+                pool_tab.append(1)
+            lit.append(m[3])
+            
+        if m[1] == "EQU":
+            sym_table.append([m[0],sym[m[2]]])
+            sym[m[0]] = sym[m[2]]
+            symbols.append(m[0])
+        
+        else:
+            sym_table.append([m[0],loc_count])
+            sym[m[0]] = loc_count
+            symbols.append(m[0])
+          
+             
+        if m[1] in DL:
+            if "'" not in m[2]:
+                loc_count = loc_count + (int(m[2]) - 1)
+        loc_count+=1
+        
+
+#for literals
+for i in range(literals,len(lit)):    
+    lit_tab.append([lit[i],loc_count-1])
+    loc_count+=1
+    
+
+
+    
+print(lit)
+#for real
+for i in l:
+    i = i.replace(","," ")
+    m = i.split()  
+    
+    if (len(m) > 1 and m[0] not in AD and m[1] not in AD) or m[0] == 'STOP':
+        print(loc_count , end = "  ")
+        output+=str(loc_count) + "  "
+   
+    if m[0] in AD:
+        print("     (AD," + AD[m[0]] + ")", end = "  ")
+        output+="\t (AD," + AD[m[0]] + ")" + "  "
+        
+        if m[0] == 'ORIGIN':
+            n = m[1].split("+")
+            loc_count = int(sym[n[0]]) + int(n[1])
+            print("(C," + str(loc_count) + ")")
+            output+="(C," + str(loc_count) + ")" + '\n'
+            
+                    
+        if len(m) > 1 and m[1] != "ORIGIN" and m[0] != "ORIGIN":
+            loc_count = int(m[1])
+            print("(C," + m[1] + ")")
+            output+="(C," + m[1] + ")" + "\n"
+        
+        if m[0] == 'LTORG':
+            print()
+            output+="\n"
+            if m[0] == 'LTORG':
+                for p in lit_tab:
+                    while loc_count in p:
+                        print(loc_count,"  (DL,01)   (C,",lit_count, ")",end = "\n",sep="")
+                        output+=str(loc_count) + "  (DL,01)   (C," + str(lit_count) + ")" + "\n"
+                        loc_count+=1
+                        lit_count+=1
+                
+            
+            
+    elif m[0] in IS:    
+        loc_count+=1
+        print("(IS," + IS[m[0]] + ")" , end = "  ")
+        output+="(IS," + IS[m[0]] + ")  "
+        if m[0] == "BC":
+            print(" " + COND[m[1]] , end = " "*8)
+            output+=" " + COND[m[1]] + ' '*8
+            print("(S," + str(symbols.index(m[2]) + 1) + ")")
+            output+="(S," + str(symbols.index(m[2]) + 1) + ")" + "\n"
+                
+        if len(m) > 1 and m[1] in REG:
+            print("(REG," + REG[m[1]] + ")", end = "  ")
+            output+="(REG," + REG[m[1]] + ")  "
+            if '=' in m[2]:
+                print("(L," + str(lit_cnt) + ")")
+                output+="(L," + str(lit_cnt) + ")" + "\n"
+                lit_cnt+=1
+            elif(len(m) > 1 and m[2] not in REG and m[2] not in COND):
+                print("(S," + str(symbols.index(m[2]) + 1) + ")")
+                output+="(S," + str(symbols.index(m[2]) + 1) + ")" + "\n"
+                
+
+        if(len(m) > 1 and m[1] not in REG and m[1] not in COND):
+            print("(S," + str(symbols.index(m[1]) + 1) + ")")
+            output+="(S," + str(symbols.index(m[1]) + 1) + ")" + "\n"
+        
+        if m[0] == "STOP" or m[1] == "STOP":
+            output+="\n"
+            print()
+   
+    else:
+        loc_count+=1        
+        if m[1] in DL:
+            print("(DL," + DL[m[1]] + ")" , end = "  ")
+            output+="(DL," + DL[m[1]] + ")" + "  "
+            if "'" in m[2]:
+                print("(C," + m[2].replace("'","") + ")")
+                output+="(C," + m[2].replace("'","") + ")" + "\n"
+            else:
+                print("(C," + m[2] + ")")
+                output+="(C," + m[2] + ")" + "\n"
+                loc_count = loc_count + (int(m[2]) - 1)
+                
+        elif m[1] in IS:
+            print("(IS," + IS[m[1]] + ")" , end = "  ")
+            output+="(IS," + IS[m[1]] + ")  "
+            if len(m) > 2 and m[2] in REG:
+                print("(REG," + REG[m[2]] + ")", end = "  ")
+                output+="(REG," + REG[m[2]] + ")  "
+
+                if '=' in m[3]:
+                    print("(L," + str(lit_cnt)  + ")")
+                    output+="(L," + str(lit_cnt)  + ")"+'\n'
+                    lit_cnt+=1
+                elif(len(m) > 1 and m[3] not in REG and m[3] not in COND):
+                    print("(S," + str(symbols.index(m[3]) + 1) + ")")
+                    output+="(S," + str(symbols.index(m[3]) + 1) + ")" + "\n"
+            if(len(m) > 2 and m[2] not in REG and m[1] not in COND):
+                print("(S," + str(symbols.index(m[2]) + 1) + ")")
+                output+="(S," + str(symbols.index(m[2]) + 1) + ")" + '\n'
+        elif m[1] == "EQU":
+            loc_count-=1
+            
+            print("     (AD," + AD[m[1]] + ")", end = "  ")
+            output+="\t (AD," + AD[m[1]] + ")  " 
+            if(len(m) > 1 and m[2] not in REG and m[2] not in COND):
+                print("(S," + str(symbols.index(m[2]) + 1) + ")")
+                output+="(S," + str(symbols.index(m[2]) + 1) + ")" + '\n'
+        if m[0] == "STOP" or m[1] == "STOP":
+            print()
+            output+='\n'
+
+print()
+output+='\n'
+for p in lit_tab:
+    while loc_count in p:
+        print(loc_count,"  (DL,01)   (C,",lit_count, ")",end = "\n",sep="")
+        output+=str(loc_count) + "  (DL,1)   (C," + str(lit_count) + ')' + '\n' 
+        loc_count+=1
+        lit_count+=1                                       
+        
+print()
+
+print(loc_count)
+print(sym_table)
+print(sym)
+print()
+print(lit_tab)
+print(lit)
+print(pool_tab)
+
+
+print()
+
+f1 = open('IC.txt','w')
+for i in output:
+    f1.write(i)
+f1.close()
+
+f2 = open('Sym_tab.txt','w')
+for i in range(len(sym_table)):
+    f2.write("{:8s}{:8s}{:8s}\n".format(str(i+1),sym_table[i][0],str(sym_table[i][1])))
+
+f2.close()
+
+f3 = open('Lit_tab.txt','w')
+for i in range(len(lit_tab)):
+    f3.write("{:8s}{:8s}{:8s}\n".format(str(i+1),lit_tab[i][0],str(lit_tab[i][1])))
+f3.close()
+
+f4 = open('Pool_tab.txt','w')
+for i in range(len(pool_tab)):
+    f4.write(str(pool_tab[i]) + "\n")
+f4.close()
+    
+print()
+    
+f.close()
+
+'''
+=> file.txt :
+
+	 START	 200
+	 MOVER 	 AREG, ='5'
+	 MOVEM   AREG  A
+LOOP MOVER   AREG, A
+	 MOVER   CREG, B
+	 ADD     CREG, ='1'
+	 MOVER 	 AREG  A
+	 MOVER 	 CREG  B
+	 MOVER 	 AREG  A
+	 MOVER 	 CREG  B
+	 MOVER 	 AREG  A
+	 BC 	 ANY,  NEXT
+	 LTORG
+	 MOVER   AREG, A
+NEXT SUB     AREG, ='1'
+	 BC   	 LT, BACK
+LAST STOP
+	 ORIGIN  LOOP+2
+	 MULT 	 CREG, B
+	 ORIGIN  LAST+1
+A    DS      1
+BACK EQU     LOOP
+B    DS      5
+	 END	 
+
+
+
+=> OUTPUT : 
+     (AD,01)  (C,200)
+200  (IS,04)  (REG,01)  (L,1)
+201  (IS,05)  (REG,01)  (S,4)
+202  (IS,04)  (REG,01)  (S,4)
+203  (IS,04)  (REG,03)  (S,6)
+204  (IS,01)  (REG,03)  (L,2)
+205  (IS,04)  (REG,01)  (S,4)
+206  (IS,04)  (REG,03)  (S,6)
+207  (IS,04)  (REG,01)  (S,4)
+208  (IS,04)  (REG,03)  (S,6)
+209  (IS,04)  (REG,01)  (S,4)
+210  (IS,07)   6        (S,2)
+     (AD,05)  
+211  (DL,01)   (C,1)
+212  (DL,01)   (C,2)
+213  (IS,04)  (REG,01)  (S,4)
+214  (IS,02)  (REG,01)  (L,3)
+215  (IS,07)   1        (S,5)
+216  (IS,00)  
+     (AD,03)  (C,204)
+204  (IS,03)  (REG,03)  (S,6)
+     (AD,03)  (C,217)
+217  (DL,02)  (C,1)
+     (AD,04)  (S,1)
+218  (DL,02)  (C,5)
+     (AD,02)  
+223  (DL,01)   (C,3)
+
+=> Lit_Tab :
+1       ='5'    211     
+2       ='1'    212     
+3       ='1'    223     
+
+
+=> Sym_Tab :
+1       LOOP    202     
+2       NEXT    214     
+3       LAST    216     
+4       A       217     
+5       BACK    202     
+6       B       219     
+
+
+=> Pool_Tab :
+1
+3
+
+'''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+spos2.py
+
+
+
+
+'''
+/***************************************************************************
+ Name - Atharv Ravindra Sonawane 
+ Div - B-44
+ Problem Statement :-
+    Design suitable Data Structures and Implement Pass - I and Pass - II of a two pass
+    assembler for pseudo machine. Implementation should consist of a few instructions from
+    each category and few assembler directives. The Output of a Pass - I (Intermediate
+    code file and symbol table) should be input for Pass - II.
+***************************************************************************/
+ 
+'''
+
+
+IS = {
+    "STOP" : "00",
+    "ADD" : "01",
+    "SUB" : "02",
+    "MULT" : "03",
+    "MOVER" : "04",
+    "MOVEM" : "05",
+    "COMP" : "06",
+    "BC" : "07",
+    "DIV" : "08",
+    "READ" : "09",
+    "PRINT" : "10"
+    }
+
+DL = {"DC" : "01",
+      "DS" : "02"}
+AD = {
+    "START" : "01",
+    "END" : "02",
+    "ORIGIN" : "03",
+    "EQU" : "04",
+    "LTORG" : "05"
+    }
+REG = {
+    "AREG" : "01",
+    "BREG" : "02",
+    "CREG" : "03",
+    "DREG" : "04"
+    }
+COND = {
+    "LT" : "1",
+    "LE" : "2",
+    "EQ" : "3",
+    "GT" : "4",
+    "GE" : "5",
+    "ANY" : "6"
+    }
+
+#Symbol Table - 
+f1 = open("Sym_tab.txt",'r')
+s = f1.read()
+s = s.splitlines()
+sym_tab = {}
+for i in s:
+    m = i.split()
+    sym_tab[m[0]] = m[2]
+
+#Literal Table -
+f2 = open("Lit_tab.txt",'r')
+l = f2.read()
+l = l.splitlines()
+lit_tab = {}
+for i in l:
+    m = i.split()
+    lit_tab[m[0]] = m[2]
+
+
+#Intermediate Code -
+f = open('IC.txt','r')
+data = f.read()
+data = data.replace("(","")
+data = data.replace(")","")
+# data = data.replace(","," ")
+data = data.splitlines()
+
+for i in data:
+    m = i.split()
+ 
+#     print((m[1].split(',')) if len(m) > 1 else "")
+#     print(m)
+    if m[0].isnumeric():
+        print(f"{m[0]})  +", end=' ')
+    else:
+        print()
+    
+    if len(m) > 2 and len(m[1]) > 3 and m[1][1] == 'L' and m[1][-1] == '1':
+        n = m[2].split(',')
+        print(f"00  0  {int(n[1]):03}", end = "\n")
+    
+    if (len(m) > 2 and len(m[1]) > 3 and m[1][1] == 'L' and m[1][-1] == '2'):
+        print("\b\b\b   ") 
+    
+    
+    if len(m) > 1 and m[1][0] == 'I':
+        n = m[1].split(',')
+        print(n[1] , end = "  ")
+        if int(n[1]) == 0:
+            print("0  000")
+        
+    if len(m) > 2 and m[2][0] == 'R':
+        n = m[2].split(',')
+        n = int(n[1])
+        print(f"{n}  " , end ="" )
+    elif len(m) > 2 and m[2][0] != 'R' and m[1][0] != 'D':
+        
+        if m[2].isnumeric():
+            print(f"{m[2]}  " ,end = "")
+        else:
+            print("0   ",end="")
+            
+    if len(m) > 3 and (m[3][0] == 'S' or m[3][0] == 'L'):
+        n = m[3].split(',')
+        if m[3][0] == 'L':
+            print(lit_tab[n[1]])
+        else:
+            print(sym_tab[n[1]])
+            
+
+f.close()
+f1.close()
+f2.close()
+
+'''
+=> Output :
+200)  + 04  1  211
+201)  + 05  1  217
+202)  + 04  1  217
+203)  + 04  3  219
+204)  + 01  3  212
+205)  + 04  1  217
+206)  + 04  3  219
+207)  + 04  1  217
+208)  + 04  3  219
+209)  + 04  1  217
+210)  + 07  6  214
+
+211)  + 00  0  001
+212)  + 00  0  002
+213)  + 04  1  217
+214)  + 02  1  223
+215)  + 07  1  202
+216)  + 00  0  000
+
+204)  + 03  3  219
+
+217)    
+
+218)    
+
+223)  + 00  0  003
+
+'''
+
+
+
+
+
+
+
+
+
+
+
+
+
+************************ Dynamic Link Library ***************************
+********* testJni1.java ************
+public class testJni1
+{
+static{
+System.loadLibrary("native");
+}
+public static void main(String args[])
+{
+System.out.println("Addition is "+ new testJni1().add(10,20));
+}
+private native int add(int n1,int n2);
+}
+
+****** Compiling the file ********
+Command:-
+gescoe@gescoe-optiplex-3020:~/Documents/AY21-22/LP-1$ javac -h . testJni1.java
+
+********** testJni1.c **********
+#include<jni.h>
+#include<stdio.h>
+#include "testJni1.h" JNIEXPORT jint JNICALL Java_testJni1_add
+(JNIEnv *env, jobject thisobj, jint n1, jint n2)
+{
+jint res;
+res=n1+n2;
+return res;
+}
+ 
+******** Compiling the file *********
+Command :-
+gescoe@gescoe-optiplex-3020:~/Documents/AY21-22/LP-1$ gcc -c -fPIC -I
+/usr/lib/jvm/java-1.8.0-openjdk-amd64/include
+-I/usr/lib/jvm/java-1.8.0-openjdk-amd64/include/linux testJni1.c -o testJni1.o
+
+***** After That RUn These Two Commands *******
+
+gescoe@gescoe-optiplex-3020:~/Documents/AY21-22/LP-1$ gcc -shared -fPIC -o
+libnative.so testJni1.o -lc
+
+gescoe@gescoe-optiplex-3020:~/Documents/AY21-22/LP-1$ java -Djava.library.path=. testJni1
+
+
+
+
+
+
+
+// sampleDLL.java
+import java.util.Scanner;
+public class sampleDLL
+{
+static
+{
+System.loadLibrary("sampleDLL");
+}
+public static void main(String args[])
+{
+Scanner scanner = new Scanner(System.in);
+int num1 = 0, num2 = 0;
+System.out.println("DLL Addition Operation");
+System.out.print("Enter first number: ");
+num1 = scanner.nextInt();
+System.out.print("Enter second number: ");
+num2 = scanner.nextInt();
+System.out.println("ADDITION IS: "+new sampleDLL().add(num1,num2));
+System.out.println("SUBSTACTION IS: "+new sampleDLL().sub(num1,num2));
+System.out.println("Multiplication IS: "+new sampleDLL().mul(num1,num2));
+}
+public native int add(int num1, int num2);
+public native int sub(int num1, int num2);
+public native int mul(int num1, int num2);
+}
+//sampleDLL.c
+#include<jni.h>
+#include<stdio.h>
+#include "sampleDLL.h"
+JNIEXPORT jint JNICALL Java_sampleDLL_add
+(JNIEnv *env, jobject thisobj, jint num1, jint num2)
+{
+return num1+num2;
+
+}
+JNIEXPORT jint JNICALL Java_sampleDLL_sub
+(JNIEnv *env, jobject thisobj, jint num1, jint num2)
+{
+return num1-num2;
+}
+JNIEXPORT jint JNICALL Java_sampleDLL_mul
+(JNIEnv *env, jobject thisobj, jint num1, jint num2)
+{
+return num1*num2;
+}
+
+
+
+
+
+
+
+
+
+
+*********************************** Synchronized.Java ***************************************
+import java.util.concurrent.Semaphore;
+import java.util.Scanner;
+
+public class ReaderWriterPrj {
+
+    static Semaphore mutex = new Semaphore(1);   
+    static Semaphore wrt = new Semaphore(1);        
+    static int readCount = 0;
+    static String message = "Hello";
+    static Scanner SC = new Scanner(System.in);
+    static class Reader implements Runnable {               
+    public void run() {
+            try {
+                //Acquire Section
+                mutex.acquire();                                      
+                readCount++;
+                if (readCount == 1) {
+                    wrt.acquire();
+                }
+                mutex.release();
+                //Reading section
+                System.out.println("Thread "+Thread.currentThread().getName() + " is READING: " + message);
+                Thread.sleep(1500);
+                System.out.println("Thread "+Thread.currentThread().getName() + " has FINISHED READING");
+                //Releasing section
+                mutex.acquire();
+                readCount--;
+                if(readCount == 0) {
+                    wrt.release();
+                }
+                mutex.release();
+            } catch (InterruptedException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+    static class Writer implements Runnable {                       //Writer Thread
+        public void run() {
+            try {
+                wrt.acquire();
+                message = "Good Morning";
+                System.out.println("Thread "+Thread.currentThread().getName() + " is WRITING: " + message);
+                       
+               
+               
+               
+                Thread.sleep(1500);
+                System.out.println("Thread "+Thread.currentThread().getName() + " has finished WRITING");
+                wrt.release();
+            } catch (InterruptedException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+    
+    public static void main(String[] args) throws Exception {
+        Reader read = new Reader();
+        Writer write = new Writer();
+        Thread r1 = new Thread(read);
+        r1.setName("Reader1");
+        Thread r2 = new Thread(read);
+        r2.setName("Reader2");
+        Thread r3 = new Thread(read);
+        r3.setName("Reader3");
+        Thread w1 = new Thread(write);
+        w1.setName("Writer1");
+        Thread w2 = new Thread(write);
+        w2.setName("Writer2");
+        Thread w3 = new Thread(write);
+        w3.setName("Writer3");
+        w1.start();
+        r1.start();
+        w2.start();
+        r2.start();
+        w3.start();
+        r3.start();
+       
+       }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+tenst
+
+
+
+
+
+
+
+
+
+
+
+
+
+/***************************************************************************
+ Name - Atharv Ravindra Sonawane 
+ Div - B-44
+ Problem Statement :-
+   Write a program to create a Dynamic Link Library 
+   for Any Mathematical operation (Arithimetic,Geometric,String Operation) & Write an application
+   program to test it (Java Native Interface / Use VB 
+   /VC++).
+***************************************************************************/
+#include<jni.h>
+#include<stdio.h>
+#include "testJni.h" 
+JNIEXPORT jint JNICALL Java_testJni_add(JNIEnv *e, jobject obj, jint a, jint b)
+{
+	jint res;
+	res = a + b;
+	return res;
+}
+JNIEXPORT jint JNICALL Java_testJni_sub(JNIEnv *e, jobject o, jint a, jint b)
+{
+	jint res;
+	res = a - b;
+	return res;
+}
+JNIEXPORT jint JNICALL Java_testJni_mul(JNIEnv *e, jobject o, jint a,  jint b)
+{
+	jint res;
+	res = a * b;
+	return res;
+}
+
+JNIEXPORT jint JNICALL Java_testJni_div(JNIEnv *e, jobject o, jdouble a, jdouble b)
+{
+	jint res;
+	res = a / b;
+	return res;
+}
+
