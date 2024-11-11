@@ -1,0 +1,779 @@
+************************ Dynamic Link Library ***************************
+********* testJni1.java ************
+public class testJni1
+{
+static{
+System.loadLibrary("native");
+}
+public static void main(String args[])
+{
+System.out.println("Addition is "+ new testJni1().add(10,20));
+}
+private native int add(int n1,int n2);
+}
+
+****** Compiling the file ********
+Command:-
+gescoe@gescoe-optiplex-3020:~/Documents/AY21-22/LP-1$ javac -h . testJni1.java
+
+********** testJni1.c **********
+#include<jni.h>
+#include<stdio.h>
+#include "testJni1.h" JNIEXPORT jint JNICALL Java_testJni1_add
+(JNIEnv *env, jobject thisobj, jint n1, jint n2)
+{
+jint res;
+res=n1+n2;
+return res;
+}
+ 
+******** Compiling the file *********
+Command :-
+gescoe@gescoe-optiplex-3020:~/Documents/AY21-22/LP-1$ gcc -c -fPIC -I
+/usr/lib/jvm/java-1.8.0-openjdk-amd64/include
+-I/usr/lib/jvm/java-1.8.0-openjdk-amd64/include/linux testJni1.c -o testJni1.o
+
+***** After That RUn These Two Commands *******
+
+gescoe@gescoe-optiplex-3020:~/Documents/AY21-22/LP-1$ gcc -shared -fPIC -o
+libnative.so testJni1.o -lc
+
+gescoe@gescoe-optiplex-3020:~/Documents/AY21-22/LP-1$ java -Djava.library.path=. testJni1
+
+
+*********************************** Synchronized.Java ***************************************
+import java.util.concurrent.Semaphore;
+import java.util.Scanner;
+
+public class ReaderWriterPrj {
+
+    static Semaphore mutex = new Semaphore(1);   
+    static Semaphore wrt = new Semaphore(1);        
+    static int readCount = 0;
+    static String message = "Hello";
+    static Scanner SC = new Scanner(System.in);
+    static class Reader implements Runnable {               
+    public void run() {
+            try {
+                //Acquire Section
+                mutex.acquire();                                      
+                readCount++;
+                if (readCount == 1) {
+                    wrt.acquire();
+                }
+                mutex.release();
+                //Reading section
+                System.out.println("Thread "+Thread.currentThread().getName() + " is READING: " + message);
+                Thread.sleep(1500);
+                System.out.println("Thread "+Thread.currentThread().getName() + " has FINISHED READING");
+                //Releasing section
+                mutex.acquire();
+                readCount--;
+                if(readCount == 0) {
+                    wrt.release();
+                }
+                mutex.release();
+            } catch (InterruptedException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+    static class Writer implements Runnable {                       //Writer Thread
+        public void run() {
+            try {
+                wrt.acquire();
+                message = "Good Morning";
+                System.out.println("Thread "+Thread.currentThread().getName() + " is WRITING: " + message);
+                       
+               
+               
+               
+                Thread.sleep(1500);
+                System.out.println("Thread "+Thread.currentThread().getName() + " has finished WRITING");
+                wrt.release();
+            } catch (InterruptedException e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+    
+    public static void main(String[] args) throws Exception {
+        Reader read = new Reader();
+        Writer write = new Writer();
+        Thread r1 = new Thread(read);
+        r1.setName("Reader1");
+        Thread r2 = new Thread(read);
+        r2.setName("Reader2");
+        Thread r3 = new Thread(read);
+        r3.setName("Reader3");
+        Thread w1 = new Thread(write);
+        w1.setName("Writer1");
+        Thread w2 = new Thread(write);
+        w2.setName("Writer2");
+        Thread w3 = new Thread(write);
+        w3.setName("Writer3");
+        w1.start();
+        r1.start();
+        w2.start();
+        r2.start();
+        w3.start();
+        r3.start();
+       
+       }
+}
+
+
+******************* 1. FCFS AND Round Robin Menu Driven ***********************************
+
+import java.util.Scanner;
+
+class Process {
+    int id, arrivalTime, burstTime, completionTime, turnaroundTime, waitingTime;
+
+    Process(int id, int arrivalTime, int burstTime) {
+        this.id = id;
+        this.arrivalTime = arrivalTime;
+        this.burstTime = burstTime;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("\nMenu:");
+            System.out.println("1. FCFS Scheduling");
+            System.out.println("2. Round Robin Scheduling");
+            System.out.println("3. Exit");
+            System.out.print("Enter your choice: ");
+            int choice = sc.nextInt();
+
+            switch (choice) {
+                case 1:
+                    fcfsScheduling(sc);
+                    break;
+                case 2:
+                    roundRobinScheduling(sc);
+                    break;
+                case 3:
+                    System.out.println("Exiting program...");
+                    sc.close();
+                    return;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+      public static void fcfsScheduling(Scanner sc) {
+        System.out.print("Enter the number of processes: ");
+        int n = sc.nextInt();
+
+        Process[] processes = new Process[n];
+
+        for (int i = 0; i < n; i++) {
+            System.out.print("Enter arrival time for process " + (i + 1) + ": ");
+            int arrivalTime = sc.nextInt();
+            System.out.print("Enter burst time for process " + (i + 1) + ": ");
+            int burstTime = sc.nextInt();
+            processes[i] = new Process(i + 1, arrivalTime, burstTime);
+        }
+
+          int currentTime = 0;
+        for (Process process : processes) {
+            if (currentTime < process.arrivalTime) {
+                currentTime = process.arrivalTime;
+            }
+            process.completionTime = currentTime + process.burstTime;
+            process.turnaroundTime = process.completionTime - process.arrivalTime;
+            process.waitingTime = process.turnaroundTime - process.burstTime;
+            currentTime = process.completionTime;
+        }
+
+        double totalTurnaroundTime = 0;
+        double totalWaitingTime = 0;
+
+        System.out.println("\nProcess\tArrival Time\tBurst Time\tCompletion Time\tTurnaround Time\tWaiting Time");
+        for (Process process : processes) {
+            System.out.println(process.id + "\t\t" + process.arrivalTime + "\t\t" + process.burstTime + "\t\t" + process.completionTime + "\t\t" + process.turnaroundTime + "\t\t" + process.waitingTime);
+            totalTurnaroundTime += process.turnaroundTime;
+            totalWaitingTime += process.waitingTime;
+        }
+ System.out.println("\nAverage Turnaround Time: " + (totalTurnaroundTime / n));
+        System.out.println("Average Waiting Time: " + (totalWaitingTime / n));
+    }
+
+    public static void roundRobinScheduling(Scanner sc) {
+        System.out.print("Enter number of processes(MAX 10): ");
+        int num = sc.nextInt();
+
+        int wtime[] = new int[10];
+        int btime[] = new int[10];
+        int rtime[] = new int[10];
+        System.out.print("Enter burst time");
+        for (int i = 0; i < num; i++) {
+            System.out.print("\nP[" + (i + 1) + "]: ");
+            btime[i] = sc.nextInt();
+            rtime[i] = btime[i];
+            wtime[i] = 0;
+        }
+
+ System.out.print("\n\nEnter quantum:");
+ int quantum = sc.nextInt(); int rp =
+num; int i=0; int time=0; System.out.print("0"); wtime[0]=0; while(rp!=0) { if(rtime[i]>quantum)
+{
+rtime[i]=rtime[i]-quantum;
+System.out.print(" | P["+(i+1)+"] | ");
+time+=quantum;
+System.out.print(time);
+}
+else if(rtime[i]<=quantum && rtime[i]>0)
+{time+=rtime[i];
+rtime[i]=rtime[i]-rtime[i];
+System.out.print(" | P["+(i+1)+"] | ");
+rp--;
+System.out.print(time);
+}
+i++;
+if(i==num)
+{
+i=0;
+}
+}
+}
+}
+
+*************************2. PRIORITY AND SRTF Menu Driven ********************************
+import java.util.Scanner;
+public class schedule{
+    public static void main(String[] args){
+        Scanner sc=new Scanner(System.in);
+        while(true){
+            
+            System.out.println("1:SRTF");
+            System.out.println("2:PRI");
+            System.out.println("3.EXIT");
+            System.out.println("enter your choice");
+            int choice=sc.nextInt();
+            switch(choice){
+                case 1:
+                    srtfs(sc);
+                    break;
+                case 2:
+                    pris(sc);
+                    break;
+                case 3:
+                     System.out.println("EXIT");
+                     sc.close();
+                     return;
+        default:
+          System.out.println("wrong choice");
+            }
+            
+        }
+    }
+    public static void srtfs(Scanner sc){
+         System.out.println("enter process");
+         int n=sc.nextInt();
+         int pid[]=new int[n];
+         int at[]=new int[n];
+         int bt[]=new int[n];
+         int ct[]=new int[n];
+         int ta[]=new int[n];
+         int wt[]=new int[n];
+         int k[]=new int[n];
+         int f[]=new int[n];
+         int st=0,tot=0;
+         float avgta=0,avgwt=0;
+         for(int i=0;i<n;i++){
+             pid[i]=i+1;
+             System.out.println("enter AT" + (i+1)+ ":");
+             at[i]=sc.nextInt();
+               System.out.println("enter BT" + (i+1)+ ":");
+             bt[i]=sc.nextInt();
+             k[i]=bt[i];
+             f[i]=0;
+         }
+         while(true){
+             int min=99,c=n;
+             if(tot==n){
+                 break;
+             }
+             for(int i=0;i<n;i++){
+                 if((at[i]<=st)&&(f[i]==0)&&(bt[i]<min)){
+                     min=bt[i];
+                     c=i;
+                 }
+             }
+             if(c==n){
+                 st++;
+                 
+             }
+             else{
+                 bt[c]--;
+                 st++;
+                 if(bt[c]==0){
+                     ct[c]=st;
+                     f[c]=1;
+                     tot++;
+                 }
+             }
+         }
+             
+        for(int i=0;i<n;i++){
+            ta[i]=ct[i]-at[i];
+            wt[i]=ta[i]-k[i];
+            avgta+=ta[i];
+            avgwt+=wt[i];
+        }
+         System.out.println("\npid \tat \tbt \tct \ttat \twt");
+          for(int i=0;i<n;i++){
+              System.out.println(pid[i]+ "\t" + at[i] + "\t" + k[i] + "\t" + ct[i] + "\t" + ta[i]+"\t" + wt[i]);
+            
+          }
+          System.out.println("avg tat" + (avgta/n));
+            System.out.println("avg wt" + (avgwt/n));
+    }
+
+    public static void pris(Scanner sc){
+          System.out.println("enter process");
+         int n=sc.nextInt();
+         int pid[]=new int[n];
+         int bt[]=new int[n];
+         int pri[]=new int[n];
+         int ta[]=new int[n];
+         int wt[]=new int[n];
+         int temp;
+         float avgta=0,avgwt=0;
+         for(int i=0;i<n;i++){
+             System.out.println("enter bt"+(i+1)+":");
+             bt[i]=sc.nextInt();
+               System.out.println("enter pri"+(i+1)+":");
+             pri[i]=sc.nextInt();
+             pid[i]=i+1;
+         }
+         for(int i=0;i<n-1;i++){
+             for(int j=i+1;j<n;j++){
+                 if(pri[i]>pri[j]){
+                     temp=pri[i];
+                     pri[i]=pri[j];
+                     pri[j]=temp;
+                     temp=pid[i];
+                     pid[i]=pid[j];
+                     pid[j]=temp;
+                     temp=bt[i];
+                     bt[i]=bt[j];
+                     bt[j]=temp;
+                 }
+             }
+         }
+         wt[0]=0;
+         ta[0]=bt[0];
+         for(int i=1;i<n;i++){
+             wt[i]=ta[i-1];
+             ta[i]=bt[i]+wt[i];
+             avgwt+=wt[i];
+             avgta+=ta[i];
+         }
+         avgwt+=wt[0];
+         avgta+=ta[0];
+         System.out.println("\npid  \tbt \tpri \tct  \twt \ttat");
+          for(int i=0;i<n;i++){
+              System.out.println("\n"+(i+1)+ "\t" + bt[i] + "\t" + pri[i] + "\t"   + ta[i]+"\t" + wt[i] +"\t" 
+             +ta[i]);
+            
+          }
+                System.out.println("avg tat" + (avgta/n));
+            System.out.println("avg wt" + (avgwt/n));
+    }
+}
+
+********************************* 4. FIFO ****************************************
+import java.io.*;
+public class FIFO {
+
+    public static void main(String[] args) throws IOException 
+    {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int frames, pointer = 0, hit = 0, fault = 0,ref_len;
+        int buffer[];
+        int reference[];
+        int mem_layout[][];
+        
+        System.out.println("Please enter the number of Frames: ");
+        frames = Integer.parseInt(br.readLine());
+        
+        System.out.println("Please enter the length of the Reference string: ");
+        ref_len = Integer.parseInt(br.readLine());
+        
+        reference = new int[ref_len];
+        mem_layout = new int[ref_len][frames];
+        buffer = new int[frames];
+        for(int j = 0; j < frames; j++)
+                buffer[j] = -1;
+        
+        System.out.println("Please enter the reference string: ");
+        for(int i = 0; i < ref_len; i++)
+        {
+            reference[i] = Integer.parseInt(br.readLine());
+        }
+        System.out.println();
+        for(int i = 0; i < ref_len; i++)
+        {
+         int search = -1;
+         for(int j = 0; j < frames; j++)
+         {
+          if(buffer[j] == reference[i])
+          {
+           search = j;
+           hit++;
+           break;
+          } 
+         }
+         if(search == -1)
+         {
+          buffer[pointer] = reference[i];
+          fault++;
+          pointer++;
+          if(pointer == frames)
+           pointer = 0;
+         }
+            for(int j = 0; j < frames; j++)
+                mem_layout[i][j] = buffer[j];
+        }
+        
+        for(int i = 0; i < frames; i++)
+        {
+            for(int j = 0; j < ref_len; j++)
+                System.out.printf("%3d ",mem_layout[j][i]);
+            System.out.println();
+        }
+        
+        System.out.println("The number of Hits: " + hit);
+        System.out.println("Hit Ratio: " + (float)((float)hit/ref_len));
+        System.out.println("The number of Faults: " + fault);
+    }
+    
+}
+
+************************************** 4. LRU **********************************************
+import java.io.*;
+import java.util.*;
+
+public class LRU {
+
+    public static void main(String[] args) throws IOException 
+    {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int frames,pointer = 0, hit = 0, fault = 0,ref_len;
+        Boolean isFull = false;
+        int buffer[];
+        ArrayList<Integer> stack = new ArrayList<Integer>();
+        int reference[];
+        int mem_layout[][];
+        
+        System.out.println("Please enter the number of Frames: ");
+        frames = Integer.parseInt(br.readLine());
+        
+        System.out.println("Please enter the length of the Reference string: ");
+        ref_len = Integer.parseInt(br.readLine());
+        
+        reference = new int[ref_len];
+        mem_layout = new int[ref_len][frames];
+        buffer = new int[frames];
+        for(int j = 0; j < frames; j++)
+                buffer[j] = -1;
+        
+        System.out.println("Please enter the reference string: ");
+        for(int i = 0; i < ref_len; i++)
+        {
+            reference[i] = Integer.parseInt(br.readLine());
+        }
+        System.out.println();
+        for(int i = 0; i < ref_len; i++)
+        {
+            if(stack.contains(reference[i]))
+            {
+             stack.remove(stack.indexOf(reference[i]));
+            }
+            stack.add(reference[i]);
+            int search = -1;
+            for(int j = 0; j < frames; j++)
+            {
+                if(buffer[j] == reference[i])
+                {
+                    search = j;
+                    hit++;
+                    break;
+                }
+            }
+            if(search == -1)
+            {
+             if(isFull)
+             {
+              int min_loc = ref_len;
+                    for(int j = 0; j < frames; j++)
+                    {
+                     if(stack.contains(buffer[j]))
+                        {
+                            int temp = stack.indexOf(buffer[j]);
+                            if(temp < min_loc)
+                            {
+                                min_loc = temp;
+                                pointer = j;
+                            }
+                        }
+                    }
+             }
+                buffer[pointer] = reference[i];
+                fault++;
+                pointer++;
+                if(pointer == frames)
+                {
+                 pointer = 0;
+                 isFull = true;
+                }
+            }
+            for(int j = 0; j < frames; j++)
+                mem_layout[i][j] = buffer[j];
+        }
+        
+        for(int i = 0; i < frames; i++)
+        {
+            for(int j = 0; j < ref_len; j++)
+                System.out.printf("%3d ",mem_layout[j][i]);
+            System.out.println();
+        }
+        
+        System.out.println("The number of Hits: " + hit);
+        System.out.println("Hit Ratio: " + (float)((float)hit/ref_len));
+        System.out.println("The number of Faults: " + fault);
+    }
+    
+}
+
+*************************************** 5. OPTIMAL ***********************************
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+public class OPTIMAL{
+
+    public static void main(String[] args) throws IOException 
+    {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int frames, pointer = 0, hit = 0, fault = 0,ref_len;
+        boolean isFull = false;
+        int buffer[];
+        int reference[];
+        int mem_layout[][];
+        
+        System.out.println("Please enter the number of Frames: ");
+        frames = Integer.parseInt(br.readLine());
+        
+        System.out.println("Please enter the length of the Reference string: ");
+        ref_len = Integer.parseInt(br.readLine());
+        
+        reference = new int[ref_len];
+        mem_layout = new int[ref_len][frames];
+        buffer = new int[frames];
+        for(int j = 0; j < frames; j++)
+                buffer[j] = -1;
+        
+        System.out.println("Please enter the reference string: ");
+        for(int i = 0; i < ref_len; i++)
+        {
+            reference[i] = Integer.parseInt(br.readLine());
+        }
+        System.out.println();
+        for(int i = 0; i < ref_len; i++)
+        {
+         int search = -1;
+         for(int j = 0; j < frames; j++)
+         {
+          if(buffer[j] == reference[i])
+          {
+           search = j;
+           hit++;
+           break;
+          } 
+         }
+         if(search == -1)
+         {
+          if(isFull)
+          {
+           int index[] = new int[frames];
+           boolean index_flag[] = new boolean[frames];
+           for(int j = i + 1; j < ref_len; j++)
+           {
+            for(int k = 0; k < frames; k++)
+            {
+             if((reference[j] == buffer[k]) && (index_flag[k] == false))
+             {
+              index[k] = j;
+              index_flag[k] = true;
+              break;
+             }
+            }
+           }
+           int max = index[0];
+           pointer = 0;
+           if(max == 0)
+            max = 200;
+           for(int j = 0; j < frames; j++)
+           {
+            if(index[j] == 0)
+             index[j] = 200;
+            if(index[j] > max)
+            {
+             max = index[j];
+             pointer = j;
+            }
+           }
+          }
+          buffer[pointer] = reference[i];
+          fault++;
+          if(!isFull)
+          {
+           pointer++;
+              if(pointer == frames)
+              {
+               pointer = 0;
+               isFull = true;
+              }
+          }
+         }
+            for(int j = 0; j < frames; j++)
+                mem_layout[i][j] = buffer[j];
+        }
+        
+        for(int i = 0; i < frames; i++)
+        {
+            for(int j = 0; j < ref_len; j++)
+                System.out.printf("%3d ",mem_layout[j][i]);
+            System.out.println();
+        }
+        
+        System.out.println("The number of Hits: " + hit);
+        System.out.println("Hit Ratio: " + (float)((float)hit/ref_len));
+        System.out.println("The number of Faults: " + fault);
+    }
+    
+}
+
+**********************************1. FIRST FIT **********************************************
+import java.util.Scanner;
+class FirstFit{
+    public static void main(String args[]){
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter no. of partitions: ");
+        int npart = sc.nextInt();
+        System.out.print("Enter size of partitions: ");
+        int part[] = new int[npart];
+        for(int i=0;i<npart;i++)
+            part[i] = sc.nextInt();
+        System.out.print("Enter no. of processes: ");
+        int npro = sc.nextInt();
+        System.out.print("Enter size of processes: ");
+        int pro[] = new int[npro];
+        for(int i=0;i<npro;i++)
+            pro[i] = sc.nextInt();
+       
+        int filled[] = new int[npart];
+        for(int i=0;i<npro;i++){
+          int k=-1;
+            for(int j=0;j<npart;j++){
+            	if(part[j]>=pro[i])
+            		if(filled[j]!=1){
+     					k=j;
+     					filled[k]=1;
+            			break;
+            		}
+            }
+            if(k==-1) System.out.println("First Fit not found for process "+(i+1)+".");
+            else System.out.println("First Fit for process "+(i+1)+" is "+part[k]+" and Hole of "+(part[k]-pro[i])+" is created.");
+        }
+    }
+}
+
+*****************************************2. BEST FIT ***********************************************
+import java.util.Scanner;
+class BestFit{
+    public static void main(String args[]){
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter no. of partitions: ");
+        int npart = sc.nextInt();
+        System.out.print("Enter size of partitions: ");
+        int part[] = new int[npart];
+        for(int i=0;i<npart;i++)
+            part[i] = sc.nextInt();
+        System.out.print("Enter no. of processes: ");
+        int npro = sc.nextInt();
+        System.out.print("Enter size of processes: ");
+        int pro[] = new int[npro];
+        for(int i=0;i<npro;i++)
+            pro[i] = sc.nextInt();
+       
+        int filled[] = new int[npart];
+        int diff[] = new int[npart];
+       
+        for(int i=0;i<npro;i++){
+            for(int j=0;j<npart;j++){
+                diff[j] = part[j]-pro[i];
+                if(filled[j]==1)
+                    diff[j]=-1;
+            }
+            int min=32767,k=0;
+            for(int j=0;j<npart;j++){
+                if(diff[j]<min&&diff[j]>=0){
+                    min=diff[j];
+                    k=j;
+                }
+            }
+            filled[k]=1;
+           
+            if(diff[k]<0) System.out.println("Best Fit not found for process "+(i+1)+".");
+            else System.out.println("Best Fit for process "+(i+1)+" is "+part[k]+" and Hole of "+diff[k]+" is created.");
+        }
+    }
+}
+
+
+**************************************3. NEXT  FIt ***************************************************
+import java.util.Scanner;
+class NextFit{
+    public static void main(String args[]){
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter no. of partitions: ");
+        int npart = sc.nextInt();
+        System.out.print("Enter size of partitions: ");
+        int part[] = new int[npart];
+        for(int i=0;i<npart;i++)
+            part[i] = sc.nextInt();
+        System.out.print("Enter no. of processes: ");
+        int npro = sc.nextInt();
+        System.out.print("Enter size of processes: ");
+        int pro[] = new int[npro];
+        for(int i=0;i<npro;i++)
+            pro[i] = sc.nextInt();
+       
+        int filled[] = new int[npart];
+         int k=0,flag=0;
+        for(int i=0;i<npro;i++){
+        	int j=k;
+        	do{
+        		if(part[j]>=pro[i])
+        			if(filled[j]!=1){
+        				k=j;
+        				filled[k]=1;
+        				flag=1;
+        				break;
+        			}
+        		j++;
+        		if(j==npart) j=0;
+        	}while(j!=k);
+            if(flag==0) System.out.println("Next Fit not found for process "+(i+1)+".");
+            else System.out.println("Next Fit for process "+(i+1)+" is "+part[k]+" and Hole of "+(part[k]-pro[i])+" is created.");
+        }
+    }
+}
